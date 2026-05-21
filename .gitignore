@@ -1,0 +1,10 @@
+# Ignore the .env file
+.env
+
+# Ignore markdown files
+*.md
+
+# Igore The virtual environment
+echo_venv
+
+
