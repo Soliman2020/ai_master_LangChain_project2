@@ -7,4 +7,5 @@
 # Igore The virtual environment
 echo_venv
 
-
+# Ignore the __pycache__ directory
+__pycache__/
