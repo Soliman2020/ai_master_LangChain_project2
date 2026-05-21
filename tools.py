@@ -118,9 +118,60 @@ def get_weather_forecast(location: str, days: int = 3) -> Dict[str, Any]:
             ]
         }
     """
-    # Mock weather API or call OpenWeatherMap or similar
+    # Clamp days to valid range
+    days = max(1, min(7, days))
 
-    return
+    conditions = ["sunny", "partly_cloudy", "cloudy", "rainy"]
+    base_temp = random.uniform(15, 30)  # Base temperature based on location/season
+    base_humidity = random.uniform(40, 70)
+    base_wind = random.uniform(5, 20)
+
+    # Determine primary condition for the forecast
+    primary_condition = random.choices(
+        conditions,
+        weights=[0.4, 0.3, 0.2, 0.1]
+    )[0]
+
+    current = {
+        "temperature_c": round(base_temp, 1),
+        "condition": primary_condition,
+        "humidity": round(base_humidity, 1),
+        "wind_speed": round(base_wind, 1)
+    }
+
+    # Generate hourly forecast for the first day
+    hourly = []
+    for hour in range(24):
+        # Temperature varies throughout the day: cooler at night, warmer midday
+        temp_variation = -3 if hour < 6 else (5 if 11 <= hour <= 15 else 0)
+        hour_temp = base_temp + temp_variation + random.uniform(-2, 2)
+
+        # Solar irradiance peaks midday, zero at night
+        if 6 <= hour <= 18:
+            solar_irradiance = round(random.uniform(200, 800) * (1 if hour < 12 else 0.8), 1)
+        else:
+            solar_irradiance = 0
+
+        # Condition may change slightly throughout the day
+        hour_condition = primary_condition
+        if random.random() < 0.2:
+            hour_condition = random.choice(conditions)
+
+        hourly.append({
+            "hour": hour,
+            "temperature_c": round(hour_temp, 1),
+            "condition": hour_condition,
+            "solar_irradiance": solar_irradiance,
+            "humidity": round(base_humidity + random.uniform(-10, 10), 1),
+            "wind_speed": round(base_wind + random.uniform(-5, 5), 1)
+        })
+
+    return {
+        "location": location,
+        "forecast_days": days,
+        "current": current,
+        "hourly": hourly
+    }
 
 # TODO: Implement get_electricity_prices tool
 @tool
@@ -152,13 +203,51 @@ def get_electricity_prices(date: str = None) -> Dict[str, Any]:
     if date is None:
         date = datetime.now().strftime("%Y-%m-%d")
 
-    # Mock electricity pricing - in real implementation, this would call a pricing API
-    # Use a base price per kWh
-    # Then generate hourly rates with peak/off-peak pricing
-    # Peak normally between 6 and 22...
-    # demand_charge should be 0 if off-peak
+    # Time-of-use pricing tiers
+    # Off-peak: 22:00 - 6:00 (night)
+    # Part-peak: 6:00 - 10:00, 14:00 - 16:00 (morning/afternoon)
+    # Peak: 10:00 - 14:00, 16:00 - 22:00 (midday/evening)
 
-    return
+    # Base rates (USD per kWh)
+    off_peak_rate = 0.08
+    part_peak_rate = 0.12
+    peak_rate = 0.18
+
+    # Demand charges (only applies during peak hours)
+    peak_demand_charge = 0.05
+
+    hourly_rates = []
+    for hour in range(24):
+        if 22 <= hour or hour < 6:
+            # Off-peak: night hours
+            period = "off_peak"
+            rate = off_peak_rate
+            demand_charge = 0
+        elif (6 <= hour < 10) or (14 <= hour < 16):
+            # Part-peak: morning and early afternoon
+            period = "part_peak"
+            rate = part_peak_rate
+            demand_charge = 0
+        else:
+            # Peak: midday and evening
+            period = "peak"
+            rate = peak_rate
+            demand_charge = peak_demand_charge
+
+        hourly_rates.append({
+            "hour": hour,
+            "rate": round(rate, 4),
+            "period": period,
+            "demand_charge": round(demand_charge, 4)
+        })
+
+    return {
+        "date": date,
+        "pricing_type": "time_of_use",
+        "currency": "USD",
+        "unit": "per_kWh",
+        "hourly_rates": hourly_rates
+    }
 
 @tool
 def query_energy_usage(start_date: str, end_date: str, device_type: str = None) -> Dict[str, Any]:
